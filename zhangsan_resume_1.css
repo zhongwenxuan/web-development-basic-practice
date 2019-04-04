@@ -1,0 +1,35 @@
+.title{
+    font-weight: bold;
+}
+
+.information{
+  margin-right: 50px; 
+}
+
+h4{
+  margin: 10px 0 0;
+}
+a{
+
+}
+
+a:link{
+  color: #4255ff
+    
+}
+
+a:visited {
+  color: #35409e
+}
+
+a:focus{
+  color: #7583ff
+}
+
+a:hover{
+  color: #7583ff
+}
+
+a:active{
+  color: #7583ff
+}
