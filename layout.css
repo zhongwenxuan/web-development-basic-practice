@@ -1,0 +1,170 @@
+body{
+    margin: 0 auto;
+}
+
+header{
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    height: 60px;
+    width: 100%;
+    background-color: #333333;
+    box-shadow: 0px 4px 4px rgba(0,0,0,0.2),
+                0px 2px 2px rgba(0,0,0,0.1);  
+}
+
+.header{
+    height: 60px;
+    max-width:1200px;
+    min-width: 300px;
+    margin: 0 auto;
+}
+
+.logo{
+    line-height: 60px;
+    padding: 10px;
+    color: aliceblue;
+    font-size: 30px;
+}
+
+.links{
+    float: right;
+    margin: 10px 0 0;
+}
+
+.slider{
+    height: 300px;
+    margin: 60px 0 0;
+    background-color: #1db3f8;
+}
+
+.slider-main{
+    position: relative;
+    max-width: 1200px;
+    height: 300px;
+    margin: 0 auto;
+}
+
+.choose{
+    position: absolute;
+    z-index: 0;
+    display: flex;
+    bottom: 20px;
+    right: 0;
+    height: 40px;
+}
+
+#choose1, #choose3, #choose4{
+    height: 20px;
+    width: 20px;
+    margin-top: 20px;
+    margin-left:10px; 
+    border: 1px solid #000;
+    background-color: #fff;
+    opacity: 0.5;
+    text-align: center;
+    line-height: 20px;
+}
+
+#choose2{
+    height: 40px;
+    width: 20px;
+    margin-left: 10px; 
+    border: 1px solid #000;
+    background-color: #fff;
+    opacity: 0.8;
+    text-align: center;
+    line-height: 60px;
+}
+
+.tag{
+    height: 50px;
+    margin-top:20px;
+    padding-bottom: 1px; 
+    border-bottom:1px solid #dddddd; 
+}
+
+.tag-main{
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#tag1{
+    height: 50px;
+    width: 120px;
+    text-align: center;
+    line-height: 50px;
+    background-color: #ffffff;
+    border-top: 1px solid #dddddd;
+    border-left: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
+    border-bottom: 1px solid #ffffff;
+    border-radius: 20px 20px 0 0;
+}
+
+#tag2, #tag3{
+    height: 50px;
+    width: 120px;
+    text-align: center;
+    line-height: 50px;
+    background-color: #eeeeee;
+    border: 1px solid #dddddd;
+    border-radius: 20px 20px 0 0;
+}
+
+.content{
+    height: 7
+    00px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.line1, .line2, .line3{
+    display: flex;
+    flex-wrap: wrap;
+    margin: 20px 0 20px;
+}
+
+.box{
+    flex: 1;
+    height: 200px;
+    margin-right: 20px;
+    border: 1px solid #dddddd;
+    text-align: center;
+    line-height: 200px;
+}
+
+#box3, #box7, #box10{
+    margin-right: 0;
+}
+
+footer{
+    height: 60px;
+    text-align: center;
+    line-height: 60px;
+    background-color: #666666;
+    color: aliceblue;
+}
+
+a{
+    color: aliceblue;
+}
+
+a:link{
+    color: aliceblue;
+}
+
+a:visited{
+    color: rgb(202, 202, 202);
+}
+
+a:focus{
+    color: rgb(143, 219, 255);
+}
+
+a:hover{
+    color: rgb(143, 219, 255);
+}
