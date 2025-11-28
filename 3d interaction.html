@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immersive Kinetic Particle System</title>
+    <style>
+        :root {
+            --primary: #00f3ff;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --bg: #050505;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* UI Overlay */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            padding: 20px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            background: transparent;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 30px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        button:hover, button.active {
+            background: var(--primary);
+            color: black;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+
+        /* Webcam Preview */
+        #webcam-preview {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 160px;
+            height: 120px;
+            border-radius: 10px;
+            border: 2px solid var(--glass-border);
+            z-index: 10;
+            transform: scaleX(-1); /* Mirror */
+            background: black;
+            object-fit: cover;
+        }
+
+        /* Drawing Modal */
+        #drawing-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #draw-canvas {
+            background: #111;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+        }
+
+        .modal-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff3333;
+            box-shadow: 0 0 10px #ff3333;
+        }
+        .status-indicator.active {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: var(--primary);
+            z-index: 50;
+            pointer-events: none;
+            text-shadow: 0 0 20px var(--primary);
+        }
+    </style>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div id="loading">Initializing System...</div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-container">
+        <h1>Particle Core</h1>
+        <div class="status-indicator" id="cam-status" title="Camera Status"></div>
+        
+        <div class="control-group">
+            <label>Shape Presets</label>
+            <div class="btn-group">
+                <button onclick="setShape('sphere')" class="active" id="btn-sphere">Sphere</button>
+                <button onclick="setShape('cone')" id="btn-cone">Cone</button>
+                <button onclick="openDrawingModal()" id="btn-custom">Draw</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Particle Color</label>
+            <input type="color" id="color-picker" value="#00f3ff">
+        </div>
+
+        <div class="control-group">
+            <label>Particle Density (<span id="density-val">15000</span>)</label>
+            <input type="range" id="density-slider" min="5000" max="30000" step="1000" value="15000">
+        </div>
+
+        <div class="control-group">
+            <label>Dispersion Rate</label>
+            <input type="range" id="dispersion-slider" min="0.01" max="0.2" step="0.01" value="0.05">
+        </div>
+
+        <div class="control-group">
+            <label style="font-size: 0.7rem; color: #aaa;">
+                Gesture Control:<br>
+                • Open Hand: Disperse<br>
+                • Closed Fist: Aggregate
+            </label>
+        </div>
+    </div>
+
+    <video id="webcam-preview" playsinline></video>
+
+    <div id="drawing-modal">
+        <h2 style="margin-bottom: 10px;">Draw Your Pattern</h2>
+        <canvas id="draw-canvas" width="400" height="400"></canvas>
+        <div class="modal-controls">
+            <button onclick="clearDrawing()">Clear</button>
+            <button onclick="saveDrawing()">Generate Particles</button>
+            <button onclick="closeDrawingModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CONFIG = {
+            particleCount: 15000,
+            particleSize: 0.08,
+            color: 0x00f3ff,
+            dispersionSpeed: 0.05,
+            bgParticleCount: 2000,
+            cameraZ: 8,
+            canvasSize: 400
+        };
+
+        // --- Global Variables ---
+        let scene, camera, renderer, controls;
+        let particleSystem, bgSystem;
+        let particlesGeometry, particlesMaterial;
+        let bgGeometry, bgMaterial;
+        
+        // Particle Data Arrays
+        let positions = [];
+        let targetPositions = [];
+        let initialPositions = []; // For random dispersion reference
+        
+        // State
+        let currentShape = 'sphere';
+        let isHandDetected = false;
+        let handState = 'closed'; // 'open' or 'closed'
+        let dispersionFactor = 0; // 0 = aggregated, 1 = dispersed
+        let time = 0;
+
+        // DOM Elements
+        const uiDensity = document.getElementById('density-slider');
+        const uiDispersion = document.getElementById('dispersion-slider');
+        const uiColor = document.getElementById('color-picker');
+        const uiDensityVal = document.getElementById('density-val');
+        const drawCanvas = document.getElementById('draw-canvas');
+        const drawCtx = drawCanvas.getContext('2d');
+        const webcamElement = document.getElementById('webcam-preview');
+        const camStatus = document.getElementById('cam-status');
+        const loading = document.getElementById('loading');
+
+        // --- Initialization ---
+        function init() {
+            initThree();
+            initBackground();
+            initParticles();
+            initMediaPipe();
+            initDrawingCanvas();
+            animate();
+            
+            // UI Listeners
+            uiDensity.addEventListener('input', (e) => {
+                CONFIG.particleCount = parseInt(e.target.value);
+                uiDensityVal.innerText = CONFIG.particleCount;
+                initParticles(); // Rebuild system
+            });
+
+            uiDispersion.addEventListener('input', (e) => {
+                CONFIG.dispersionSpeed = parseFloat(e.target.value);
+            });
+
+            uiColor.addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                particlesMaterial.color = color;
+            });
+
+            window.addEventListener('resize', onWindowResize, false);
+            loading.style.display = 'none';
+        }
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050505, 0.03);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = CONFIG.cameraZ;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+        }
+
+        function initBackground() {
+            bgGeometry = new THREE.BufferGeometry();
+            const bgPos = [];
+            for (let i = 0; i < CONFIG.bgParticleCount; i++) {
+                const x = (Math.random() - 0.5) * 50;
+                const y = (Math.random() - 0.5) * 50;
+                const z = (Math.random() - 0.5) * 50;
+                bgPos.push(x, y, z);
+            }
+            bgGeometry.setAttribute('position', new THREE.Float32BufferAttribute(bgPos, 3));
+            
+            bgMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.03,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            bgSystem = new THREE.Points(bgGeometry, bgMaterial);
+            scene.add(bgSystem);
+        }
+
+        function initParticles() {
+            if (particleSystem) scene.remove(particleSystem);
+
+            particlesGeometry = new THREE.BufferGeometry();
+            positions = new Float32Array(CONFIG.particleCount * 3);
+            targetPositions = new Float32Array(CONFIG.particleCount * 3);
+            initialPositions = new Float32Array(CONFIG.particleCount * 3);
+
+            // Initialize random positions (dispersed state)
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const x = (Math.random() - 0.5) * 20;
+                const y = (Math.random() - 0.5) * 20;
+                const z = (Math.random() - 0.5) * 20;
+                
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+
+                initialPositions[i * 3] = x;
+                initialPositions[i * 3 + 1] = y;
+                initialPositions[i * 3 + 2] = z;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            // Load texture for soft particles
+            const sprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+
+            particlesMaterial = new THREE.PointsMaterial({
+                color: new THREE.Color(uiColor.value),
+                size: CONFIG.particleSize,
+                map: sprite,
+                transparent: true,
+                alphaTest: 0.5,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particleSystem);
+
+            // Set initial target
+            updateTargetShape();
+        }
+
+        // --- Shape Generation Logic ---
+
+        function setShape(type) {
+            currentShape = type;
+            
+            // Update UI buttons
+            document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+            if(type === 'sphere') document.getElementById('btn-sphere').classList.add('active');
+            if(type === 'cone') document.getElementById('btn-cone').classList.add('active');
+            if(type === 'custom') document.getElementById('btn-custom').classList.add('active');
+
+            updateTargetShape();
+        }
+
+        function updateTargetShape() {
+            let getPoint;
+
+            if (currentShape === 'sphere') {
+                getPoint = () => {
+                    const r = 2.5;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    return {
+                        x: r * Math.sin(phi) * Math.cos(theta),
+                        y: r * Math.sin(phi) * Math.sin(theta),
+                        z: r * Math.cos(phi)
+                    };
+                };
+            } else if (currentShape === 'cone') {
+                getPoint = () => {
+                    const h = 4;
+                    const rBase = 2;
+                    const y = (Math.random() - 0.5) * h; // -2 to 2
+                    const radiusAtY = ((y + h/2) / h) * rBase; // 0 at bottom, rBase at top (inverted cone) or vice versa. 
+                    // Let's make a pyramid/cone standing up
+                    // y from -2 to 2. Radius decreases as y increases.
+                    const normalizedY = (y + 2) / 4; // 0 to 1
+                    const r = rBase * (1 - normalizedY);
+                    const theta = Math.random() * Math.PI * 2;
+                    return {
+                        x: r * Math.cos(theta),
+                        y: y,
+                        z: r * Math.sin(theta)
+                    };
+                };
+            } else if (currentShape === 'custom') {
+                // Custom points are already generated in customPointsArray
+                // If not available, fallback to sphere
+                if (!window.customPointsArray || window.customPointsArray.length === 0) {
+                    setShape('sphere');
+                    return;
+                }
+            }
+
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                let x, y, z;
+
+                if (currentShape === 'custom') {
+                    // Cycle through custom points
+                    const p = window.customPointsArray[i % window.customPointsArray.length];
+                    x = p.x;
+                    y = p.y;
+                    z = p.z;
+                } else {
+                    const p = getPoint();
+                    x = p.x;
+                    y = p.y;
+                    z = p.z;
+                }
+
+                targetPositions[i * 3] = x;
+                targetPositions[i * 3 + 1] = y;
+                targetPositions[i * 3 + 2] = z;
+            }
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.01;
+
+            // Determine target state based on Hand
+            // Hand Open = Disperse (Go to initialPositions/Random)
+            // Hand Closed = Aggregate (Go to targetPositions/Shape)
+            
+            let targetFactor = 0; // 0 = Aggregate
+            if (isHandDetected) {
+                if (handState === 'open') targetFactor = 1; // Disperse
+            } else {
+                // Auto idle animation if no hand
+                // targetFactor = (Math.sin(time) + 1) / 2 * 0.2; // Slight breathing
+                targetFactor = 0;
+            }
+
+            // Smoothly interpolate dispersionFactor
+            dispersionFactor += (targetFactor - dispersionFactor) * 0.1;
+
+            const positionsAttr = particleSystem.geometry.attributes.position;
+            const array = positionsAttr.array;
+
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const i3 = i * 3;
+
+                // Calculate where the particle should be based on shape
+                let tx = targetPositions[i3];
+                let ty = targetPositions[i3 + 1];
+                let tz = targetPositions[i3 + 2];
+
+                // Calculate dispersion target (noise/explosion)
+                // We use initialPositions plus some noise based on time
+                const noiseScale = 2.0;
+                const dx = initialPositions[i3] * noiseScale + Math.sin(time + i) * 0.5;
+                const dy = initialPositions[i3 + 1] * noiseScale + Math.cos(time + i * 0.5) * 0.5;
+                const dz = initialPositions[i3 + 2] * noiseScale;
+
+                // Mix based on dispersionFactor
+                const finalTx = tx + (dx - tx) * dispersionFactor;
+                const finalTy = ty + (dy - ty) * dispersionFactor;
+                const finalTz = tz + (dz - tz) * dispersionFactor;
+
+                // Move current position towards final target
+                array[i3] += (finalTx - array[i3]) * CONFIG.dispersionSpeed;
+                array[i3 + 1] += (finalTy - array[i3 + 1]) * CONFIG.dispersionSpeed;
+                array[i3 + 2] += (finalTz - array[i3 + 2]) * CONFIG.dispersionSpeed;
+            }
+
+            positionsAttr.needsUpdate = true;
+
+            // Rotate background slowly
+            bgSystem.rotation.y += 0.0005;
+            bgSystem.rotation.x += 0.0002;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- MediaPipe Hands Integration ---
+        function initMediaPipe() {
+            const hands = new Hands({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }});
+
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults(onHandsResults);
+
+            const cameraUtils = new Camera(webcamElement, {
+                onFrame: async () => {
+                    await hands.send({image: webcamElement});
+                },
+                width: 320,
+                height: 240
+            });
+
+            cameraUtils.start()
+                .then(() => {
+                    console.log("Camera started");
+                    camStatus.classList.add('active');
+                })
+                .catch(err => {
+                    console.error("Camera error:", err);
+                    alert("Camera access denied or not found. The system will work in auto-mode.");
+                });
+        }
+
+        function onHandsResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                isHandDetected = true;
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // Detect Open vs Closed Hand
+                // Logic: Calculate average distance of finger tips to wrist (landmark 0)
+                // Tips: 4 (Thumb), 8 (Index), 12 (Middle), 16 (Ring), 20 (Pinky)
+                
+                const wrist = landmarks[0];
+                const tips = [8, 12, 16, 20]; // Exclude thumb for simpler logic
+                let avgDist = 0;
+
+                tips.forEach(idx => {
+                    const tip = landmarks[idx];
+                    const d = Math.sqrt(
+                        Math.pow(tip.x - wrist.x, 2) + 
+                        Math.pow(tip.y - wrist.y, 2) + 
+                        Math.pow(tip.z - wrist.z, 2)
+                    );
+                    avgDist += d;
+                });
+                avgDist /= tips.length;
+
+                // Threshold determined empirically (normalized coordinates)
+                // Closed fist usually < 0.2, Open hand > 0.3
+                if (avgDist < 0.25) {
+                    handState = 'closed'; // Aggregate
+                } else {
+                    handState = 'open'; // Disperse
+                }
+
+                // Optional: Map hand position to camera rotation or particle rotation
+                // Map x (0-1) to rotation (-1 to 1)
+                const handX = landmarks[9].x; // Middle finger knuckle
+                const handY = landmarks[9].y;
+                
+                // Subtle interaction with scene rotation
+                const targetRotX = (handY - 0.5) * 1.0;
+                const targetRotY = (handX - 0.5) * 1.0;
+                
+                particleSystem.rotation.x += (targetRotX - particleSystem.rotation.x) * 0.05;
+                particleSystem.rotation.y += (targetRotY - particleSystem.rotation.y) * 0.05;
+
+            } else {
+                isHandDetected = false;
+            }
+        }
+
+        // --- Drawing Canvas Logic ---
+        let isDrawing = false;
+
+        function initDrawingCanvas() {
+            // Black background
+            drawCtx.fillStyle = 'black';
+            drawCtx.fillRect(0, 0, CONFIG.canvasSize, CONFIG.canvasSize);
+            drawCtx.lineWidth = 15;
+            drawCtx.lineCap = 'round';
+            drawCtx.strokeStyle = 'white';
+
+            drawCanvas.addEventListener('mousedown', startDrawing);
+            drawCanvas.addEventListener('mousemove', draw);
+            drawCanvas.addEventListener('mouseup', stopDrawing);
+            drawCanvas.addEventListener('mouseleave', stopDrawing);
+            
+            // Touch support
+            drawCanvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent("mousedown", {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                drawCanvas.dispatchEvent(mouseEvent);
+            });
+            drawCanvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent("mousemove", {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                drawCanvas.dispatchEvent(mouseEvent);
+            });
+            drawCanvas.addEventListener('touchend', () => {
+                const mouseEvent = new MouseEvent("mouseup", {});
+                drawCanvas.dispatchEvent(mouseEvent);
+            });
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = drawCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            drawCtx.lineTo(x, y);
+            drawCtx.stroke();
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            drawCtx.beginPath();
+        }
+
+        function clearDrawing() {
+            drawCtx.fillStyle = 'black';
+            drawCtx.fillRect(0, 0, CONFIG.canvasSize, CONFIG.canvasSize);
+        }
+
+        function openDrawingModal() {
+            document.getElementById('drawing-modal').style.display = 'flex';
+            controls.enabled = false; // Disable orbit controls
+        }
+
+        function closeDrawingModal() {
+            document.getElementById('drawing-modal').style.display = 'none';
+            controls.enabled = true;
+        }
+
+        function saveDrawing() {
+            // Process image data to points
+            const imgData = drawCtx.getImageData(0, 0, CONFIG.canvasSize, CONFIG.canvasSize);
+            const data = imgData.data;
+            const points = [];
+            const step = 4; // Skip pixels for performance
+
+            for (let y = 0; y < CONFIG.canvasSize; y += step) {
+                for (let x = 0; x < CONFIG.canvasSize; x += step) {
+                    const index = (y * CONFIG.canvasSize + x) * 4;
+                    // If pixel is bright (white drawing)
+                    if (data[index] > 100) {
+                        // Map 2D to 3D centered
+                        // Canvas is 400x400. Map to -3 to 3 range
+                        const pX = (x / CONFIG.canvasSize - 0.5) * 6;
+                        const pY = -(y / CONFIG.canvasSize - 0.5) * 6; // Invert Y
+                        const pZ = (Math.random() - 0.5) * 0.5; // Slight depth
+                        points.push({x: pX, y: pY, z: pZ});
+                    }
+                }
+            }
+
+            if (points.length > 0) {
+                // Shuffle points for better distribution
+                for (let i = points.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [points[i], points[j]] = [points[j], points[i]];
+                }
+                window.customPointsArray = points;
+                setShape('custom');
+                closeDrawingModal();
+            } else {
+                alert("Please draw something first!");
+            }
+        }
+
+        // Start
+        window.onload = init;
+
+    </script>
+</body>
+</html>
